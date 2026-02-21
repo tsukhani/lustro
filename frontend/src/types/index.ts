@@ -147,6 +147,7 @@ export interface AppConfig {
   trash_dir: string;
   thumbnail_cache_dir: string;
   max_thumbnail_size: [number, number];
+  theme: "dark" | "light";
 }
 
 // ---------------------------------------------------------------------------

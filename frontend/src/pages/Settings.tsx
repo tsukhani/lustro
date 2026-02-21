@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { getConfig, updateConfig } from "@/lib/api";
-import type { AppConfig } from "@/types";
-import { Save, Loader2, FolderOpen, Ban, Trash2, X, Plus } from "lucide-react";
+import { getConfig, updateConfig, getStorageStats } from "@/lib/api";
+import type { AppConfig, StorageStat } from "@/types";
+import { Save, Loader2, FolderOpen, Ban, Trash2, X, Plus, Sun, Moon, HardDrive } from "lucide-react";
 import { toast } from "sonner";
+import { formatBytes } from "@/lib/utils";
 
 const DEFAULT_CONFIG: AppConfig = {
-  default_directories: ["/storage/video", "/storage/music", "/storage/photos"],
+  default_directories: ["/storage"],
   default_excluded_directories: [
     "@eaDir",
     ".Trash-*",
@@ -22,7 +23,8 @@ const DEFAULT_CONFIG: AppConfig = {
   ],
   trash_dir: "/config/trash",
   thumbnail_cache_dir: "/config/thumbnails",
-  max_thumbnail_size: [200, 200],
+  max_thumbnail_size: [300, 300],
+  theme: "dark",
 };
 
 export default function Settings() {
@@ -31,13 +33,16 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [newDir, setNewDir] = useState("");
   const [newExclusion, setNewExclusion] = useState("");
+  const [volumes, setVolumes] = useState<StorageStat[]>([]);
 
   useEffect(() => {
-    getConfig()
-      .then((data) => setConfig(data))
-      .catch(() => {
-        // Use defaults if backend not available
-        setConfig(DEFAULT_CONFIG);
+    Promise.all([
+      getConfig().catch(() => DEFAULT_CONFIG),
+      getStorageStats().catch(() => [] as StorageStat[]),
+    ])
+      .then(([cfg, stats]) => {
+        setConfig(cfg);
+        setVolumes(stats);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -102,8 +107,72 @@ export default function Settings() {
     );
   }
 
+  function handleThemeChange(newTheme: "dark" | "light") {
+    setConfig({ ...config, theme: newTheme });
+    // Apply immediately
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(newTheme);
+    localStorage.setItem("theme", newTheme);
+  }
+
   return (
     <div className="space-y-6 max-w-2xl">
+      {/* Mounted Volumes */}
+      {volumes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <HardDrive className="h-4 w-4" />
+              Mounted Volumes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {volumes.map((vol) => (
+              <div
+                key={vol.mount}
+                className="flex items-center justify-between p-2 rounded bg-muted/50"
+              >
+                <span className="text-sm font-mono">{vol.mount}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatBytes(vol.used)} / {formatBytes(vol.total)} ({vol.percent_used.toFixed(1)}%)
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Theme */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            {config.theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            Appearance
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <Button
+              variant={config.theme === "dark" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleThemeChange("dark")}
+            >
+              <Moon className="h-4 w-4 mr-2" />
+              Dark
+            </Button>
+            <Button
+              variant={config.theme === "light" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleThemeChange("light")}
+            >
+              <Sun className="h-4 w-4 mr-2" />
+              Light
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Default directories */}
       <Card>
         <CardHeader>

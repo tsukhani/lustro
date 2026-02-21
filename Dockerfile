@@ -10,9 +10,9 @@ RUN npm run build
 FROM python:3.12-slim
 WORKDIR /app
 
-# Install czkawka_cli
+# Install czkawka_cli (v11.0.1 x86_64)
 RUN apt-get update && apt-get install -y --no-install-recommends wget ca-certificates && \
-    wget -O /usr/local/bin/czkawka_cli https://github.com/qarmin/czkawka/releases/download/8.0.0/linux_czkawka_cli && \
+    wget -O /usr/local/bin/czkawka_cli https://github.com/qarmin/czkawka/releases/download/11.0.1/linux_czkawka_cli_x86_64 && \
     chmod +x /usr/local/bin/czkawka_cli && \
     apt-get purge -y wget && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
