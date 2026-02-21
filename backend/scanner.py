@@ -187,6 +187,8 @@ class ScanManager:
 
         # Suppress console output when saving to file
         cmd.append("--do-not-print-results")
+        # Always return exit code 0 (don't use error code to signal "found results")
+        cmd.append("--ignore-error-code-on-found")
 
         # Type-specific options
         opts = scan.options
@@ -267,19 +269,17 @@ class ScanManager:
             if scan.status == ScanStatus.CANCELLED:
                 return
 
-            # czkawka exits with code 2 when it finds results (not an error!)
-            # Code 0 = no results found, Code 2 = results found
-            if proc.returncode in (0, 2):
-                results = None
-                # Read JSON results from file
-                if json_output.exists():
-                    try:
-                        results = json.loads(json_output.read_text())
-                    except json.JSONDecodeError:
-                        results = None
-                    finally:
-                        json_output.unlink(missing_ok=True)
+            # Check for results file first — if it exists, scan succeeded regardless of exit code
+            results = None
+            if json_output.exists():
+                try:
+                    results = json.loads(json_output.read_text())
+                except json.JSONDecodeError:
+                    results = None
+                finally:
+                    json_output.unlink(missing_ok=True)
 
+            if results is not None or proc.returncode == 0:
                 scan.results = results
                 scan.findings_count = self._count_findings(results)
                 scan.total_size = self._calc_total_size(results)
