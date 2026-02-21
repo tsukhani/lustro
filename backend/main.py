@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -171,8 +172,6 @@ async def storage_stats():
 @app.get("/api/storage/directories")
 async def storage_directories():
     """List actual directories available under /storage."""
-    import shutil
-    from pathlib import Path
     storage_root = Path(os.getenv("STORAGE_ROOT", "/storage"))
     dirs = []
     if storage_root.exists():
