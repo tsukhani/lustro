@@ -178,16 +178,7 @@ async def storage_directories():
         for child in sorted(storage_root.iterdir()):
             if child.is_dir():
                 name = child.name.replace("_", " ").replace("-", " ").title()
-                try:
-                    usage = shutil.disk_usage(child)
-                    # Get actual folder size estimate from the directory
-                    # Use a quick count of immediate children as a proxy
-                    dirs.append({
-                        "path": str(child),
-                        "name": name,
-                    })
-                except OSError:
-                    dirs.append({"path": str(child), "name": name})
+                dirs.append({"path": str(child), "name": name})
     return dirs
 
 
