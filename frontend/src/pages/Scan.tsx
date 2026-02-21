@@ -16,9 +16,21 @@ const DEFAULT_OPTIONS: Record<string, ScanOptions> = {
   "music": { music_similarity: "tags" },
 };
 
+// Map old URL names to v11 names for backwards compatibility
+const LEGACY_TYPE_MAP: Record<string, string> = {
+  duplicates: "dup",
+  "similar-images": "image",
+  "similar-videos": "video",
+  "similar-music": "music",
+  "empty-dirs": "empty-folders",
+  temporary: "temp",
+  "bad-extensions": "ext",
+};
+
 export default function Scan() {
   const { type } = useParams<{ type: string }>();
-  const scanType = (type ?? "dup") as ScanType;
+  const rawType = type ?? "dup";
+  const scanType = (LEGACY_TYPE_MAP[rawType] ?? rawType) as ScanType;
   const label = SCAN_TYPE_LABELS[scanType] ?? scanType;
 
   const [selectedPaths, setSelectedPaths] = useState<string[]>([
