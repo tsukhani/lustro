@@ -165,7 +165,7 @@ async def file_preview(path: str):
 
 @app.get("/api/storage/stats")
 async def storage_stats():
-    return get_storage_stats()
+    return await get_storage_stats()
 
 
 # ---------------------------------------------------------------------------
