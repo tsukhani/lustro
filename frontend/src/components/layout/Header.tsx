@@ -53,10 +53,12 @@ function StorageSummary() {
       </TooltipTrigger>
       <TooltipContent>
         <div className="space-y-1">
-          {stats.map((s) => (
-            <div key={s.mount} className="text-xs">
-              <span className="font-medium">{s.mount}:</span>{" "}
-              {formatBytes(s.used)} / {formatBytes(s.total)} ({s.percent_used.toFixed(1)}%)
+          <div className="text-xs font-medium mb-1">
+            Disk: {formatBytes(totalUsed)} / {formatBytes(totalSize)} ({pct.toFixed(1)}%)
+          </div>
+          {stats.flatMap((s) => s.sub_mounts ?? [s.mount]).map((m) => (
+            <div key={m} className="text-xs text-muted-foreground">
+              {m}
             </div>
           ))}
         </div>
