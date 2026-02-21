@@ -1,0 +1,14 @@
+.git
+.gitignore
+README.md
+SPEC.md
+config/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+backend/__pycache__/
+backend/.venv/
+*.pyc
+.env
+.vscode
+.idea

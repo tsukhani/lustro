@@ -1,0 +1,12 @@
+services:
+  czkawka-ui:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/config
+      - /path/to/files:/storage/files
+    environment:
+      - TZ=Asia/Kuala_Lumpur
+      - PUID=1000
+      - PGID=1000
