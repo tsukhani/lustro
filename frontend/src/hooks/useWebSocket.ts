@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ScanProgress, WsMessage } from "@/types";
+import type { ScanProgress, ScanStatus, WsMessage } from "@/types";
 
 interface UseWebSocketOptions {
   scanId: string | null;
   onProgress?: (progress: ScanProgress) => void;
-  onDone?: (status: string) => void;
+  onDone?: (status: ScanStatus) => void;
 }
 
-export function useWebSocket({ scanId, onProgress, onDone }: UseWebSocketOptions) {
+export function useWebSocket({
+  scanId,
+  onProgress,
+  onDone,
+}: UseWebSocketOptions) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const retriesRef = useRef(0);
+  const maxRetries = 5;
 
   const connect = useCallback(() => {
     if (!scanId) return;
@@ -19,17 +25,19 @@ export function useWebSocket({ scanId, onProgress, onDone }: UseWebSocketOptions
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
-    ws.onopen = () => setConnected(true);
+    ws.onopen = () => {
+      setConnected(true);
+      retriesRef.current = 0;
+    };
 
     ws.onmessage = (event) => {
       try {
-        const data: WsMessage = JSON.parse(event.data);
+        const data: WsMessage = JSON.parse(event.data as string);
         if ("type" in data && data.type === "ping") return;
         if ("type" in data && data.type === "done") {
           onDone?.(data.status);
           return;
         }
-        // Progress update
         onProgress?.(data as ScanProgress);
       } catch {
         // ignore non-JSON messages
@@ -39,6 +47,14 @@ export function useWebSocket({ scanId, onProgress, onDone }: UseWebSocketOptions
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
+      // Reconnect logic
+      if (retriesRef.current < maxRetries) {
+        retriesRef.current += 1;
+        const delay = Math.min(1000 * Math.pow(2, retriesRef.current), 10000);
+        setTimeout(() => {
+          connect();
+        }, delay);
+      }
     };
 
     ws.onerror = () => {
@@ -47,6 +63,7 @@ export function useWebSocket({ scanId, onProgress, onDone }: UseWebSocketOptions
   }, [scanId, onProgress, onDone]);
 
   const disconnect = useCallback(() => {
+    retriesRef.current = maxRetries; // prevent reconnect
     wsRef.current?.close();
     wsRef.current = null;
     setConnected(false);
@@ -54,8 +71,12 @@ export function useWebSocket({ scanId, onProgress, onDone }: UseWebSocketOptions
 
   useEffect(() => {
     connect();
-    return disconnect;
-  }, [connect, disconnect]);
+    return () => {
+      retriesRef.current = maxRetries;
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [connect]);
 
   return { connected, disconnect };
 }

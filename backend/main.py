@@ -3,21 +3,21 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from config import load_config, save_config
-from file_ops import delete_files, generate_thumbnail, trash_files
+from file_ops import delete_files, generate_thumbnail, get_trash, restore_from_trash, trash_files
 from models import (
     AppConfig,
     FileDeleteRequest,
     FileTrashRequest,
     ScanRequest,
+    TrashRestoreRequest,
 )
 from scanner import ScanManager
 from storage import get_storage_stats
@@ -55,8 +55,11 @@ async def health():
 
 @app.post("/api/scans")
 async def create_scan(request: ScanRequest):
-    scan = await scan_manager.start_scan(request)
-    return scan
+    try:
+        scan = await scan_manager.start_scan(request)
+        return scan
+    except RuntimeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 @app.get("/api/scans")
@@ -123,21 +126,33 @@ async def scan_progress_ws(websocket: WebSocket, scan_id: str):
 
 @app.post("/api/files/delete")
 async def api_delete_files(request: FileDeleteRequest):
-    result = delete_files(request.paths)
-    return result
+    return delete_files(request.paths)
 
 
 @app.post("/api/files/trash")
 async def api_trash_files(request: FileTrashRequest):
     config = load_config()
-    result = trash_files(request.paths, config)
-    return result
+    return trash_files(request.paths, config)
+
+
+@app.get("/api/files/trash")
+async def api_get_trash():
+    config = load_config()
+    return get_trash(config)
+
+
+@app.post("/api/files/restore")
+async def api_restore_from_trash(request: TrashRestoreRequest):
+    config = load_config()
+    return restore_from_trash(request.trash_id, config)
 
 
 @app.get("/api/files/preview/{path:path}")
 async def file_preview(path: str):
     full_path = f"/{path}"  # reconstruct absolute path
-    data = generate_thumbnail(full_path)
+    config = load_config()
+    cache_dir = Path(config.thumbnail_cache_dir)
+    data = generate_thumbnail(full_path, config.max_thumbnail_size, cache_dir)
     if data is None:
         raise HTTPException(status_code=404, detail="Cannot generate preview")
     return Response(content=data, media_type="image/jpeg")

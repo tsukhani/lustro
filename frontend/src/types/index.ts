@@ -28,6 +28,7 @@ export interface ScanOptions {
   tolerance?: number;
   music_similarity?: string;
   checked_types?: string[];
+  hash_type?: string;
 }
 
 export interface ScanRequest {
@@ -52,7 +53,7 @@ export interface ScanResult {
   excluded_directories: string[];
   options: ScanOptions;
   progress: ScanProgress;
-  results: unknown;
+  results: ScanResultData | null;
   findings_count: number;
   total_size: number;
   created_at: string;
@@ -60,6 +61,52 @@ export interface ScanResult {
   completed_at: string | null;
   error: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Result data structures (from czkawka_cli --json)
+// ---------------------------------------------------------------------------
+
+export interface FileEntry {
+  path: string;
+  size: number;
+  modified: string;
+  hash?: string;
+  similarity?: number;
+}
+
+export interface FileGroup {
+  id: number;
+  files: FileEntry[];
+  total_size: number;
+}
+
+/** Grouped results (duplicates, similar-images, etc.) */
+export interface GroupedResults {
+  groups: FileGroup[];
+}
+
+/** Flat results (empty files, temp files, broken files, etc.) */
+export interface FlatResults {
+  files: FileEntry[];
+}
+
+export type ScanResultData = GroupedResults | FlatResults;
+
+export function isGroupedResults(data: ScanResultData): data is GroupedResults {
+  return "groups" in data;
+}
+
+export function isFlatResults(data: ScanResultData): data is FlatResults {
+  return "files" in data && !("groups" in data);
+}
+
+/** Scan types that return grouped results */
+export const GROUPED_SCAN_TYPES: ScanType[] = [
+  "duplicates",
+  "similar-images",
+  "similar-videos",
+  "similar-music",
+];
 
 // ---------------------------------------------------------------------------
 // File operations
@@ -120,3 +167,13 @@ export interface WsDoneMessage {
 }
 
 export type WsMessage = WsProgressMessage | WsPingMessage | WsDoneMessage;
+
+// ---------------------------------------------------------------------------
+// Storage path info (for path selector)
+// ---------------------------------------------------------------------------
+
+export interface StoragePath {
+  path: string;
+  name: string;
+  size?: number;
+}

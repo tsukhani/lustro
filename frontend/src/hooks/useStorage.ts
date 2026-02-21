@@ -14,7 +14,9 @@ export function useStorage() {
       setStats(data);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load storage stats");
+      setError(
+        e instanceof Error ? e.message : "Failed to load storage stats",
+      );
     } finally {
       setLoading(false);
     }

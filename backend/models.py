@@ -56,6 +56,7 @@ class ScanRequest(BaseModel):
 
 
 class ScanProgress(BaseModel):
+    type: str = "progress"
     current_stage: str = ""
     current_file: str = ""
     files_processed: int = 0
@@ -96,6 +97,19 @@ class FileOperationResult(BaseModel):
     failed: list[dict[str, str]] = Field(default_factory=list)  # [{path, error}]
 
 
+class TrashItem(BaseModel):
+    """A file sitting in the trash directory."""
+    trash_id: str              # unique identifier (filename in trash dir)
+    original_path: str         # where the file came from
+    trashed_at: datetime       # when it was moved to trash
+    filename: str              # original filename
+    size: int = 0              # file size in bytes
+
+
+class TrashRestoreRequest(BaseModel):
+    trash_id: str
+
+
 # ---------------------------------------------------------------------------
 # Storage
 # ---------------------------------------------------------------------------
@@ -122,3 +136,4 @@ class AppConfig(BaseModel):
     trash_dir: str = "/config/trash"
     thumbnail_cache_dir: str = "/config/thumbnails"
     max_thumbnail_size: tuple[int, int] = (300, 300)
+    theme: str = "dark"

@@ -1,69 +1,74 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
-import type { ScanType } from "@/types";
+import { StorageCard } from "@/components/dashboard/StorageCard";
+import { RecentScans } from "@/components/dashboard/RecentScans";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { useStorage } from "@/hooks/useStorage";
+import { Loader2 } from "lucide-react";
+import type { StorageStat } from "@/types";
 
-const QUICK_SCANS: Array<{ type: ScanType; label: string; description: string }> = [
-  { type: "duplicates", label: "Duplicate Files", description: "Find files with identical content" },
-  { type: "similar-images", label: "Similar Images", description: "Find visually similar images" },
-  { type: "empty-dirs", label: "Empty Directories", description: "Find empty folders to clean up" },
-  { type: "temporary", label: "Temporary Files", description: "Find leftover temp files" },
-  { type: "broken", label: "Broken Files", description: "Find corrupted/broken files" },
+/** Mock storage data — used when backend isn't available */
+const MOCK_STORAGE: StorageStat[] = [
+  {
+    mount: "/storage/video",
+    total: 4_000_000_000_000,
+    used: 3_200_000_000_000,
+    free: 800_000_000_000,
+    percent_used: 80,
+  },
+  {
+    mount: "/storage/music",
+    total: 500_000_000_000,
+    used: 150_000_000_000,
+    free: 350_000_000_000,
+    percent_used: 30,
+  },
+  {
+    mount: "/storage/photos",
+    total: 1_000_000_000_000,
+    used: 780_000_000_000,
+    free: 220_000_000_000,
+    percent_used: 78,
+  },
+  {
+    mount: "/storage/documents",
+    total: 200_000_000_000,
+    used: 45_000_000_000,
+    free: 155_000_000_000,
+    percent_used: 22.5,
+  },
 ];
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  const { stats, loading, error } = useStorage();
+
+  // Use real stats if available, fall back to mock
+  const storageStats = stats.length > 0 ? stats : MOCK_STORAGE;
+  const isMock = stats.length === 0 && !loading;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Storage overview */}
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Storage overview and quick actions
-        </p>
-      </div>
-
-      {/* Storage overview — placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Storage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Storage stats will appear here once connected to the backend.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Quick scan buttons */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Quick Scan</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {QUICK_SCANS.map((scan) => (
-            <Card
-              key={scan.type}
-              className="cursor-pointer hover:border-primary transition-colors"
-              onClick={() => navigate(`/scan/${scan.type}`)}
-            >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">{scan.label}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{scan.description}</p>
-              </CardContent>
-            </Card>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Storage Overview</h2>
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          {isMock && !error && (
+            <span className="text-xs text-muted-foreground">
+              Showing sample data — connect backend for live stats
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {storageStats.map((stat) => (
+            <StorageCard key={stat.mount} stat={stat} />
           ))}
         </div>
       </div>
 
-      {/* Recent scans — placeholder */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Recent Scans</h2>
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            No scans yet. Start one above!
-          </CardContent>
-        </Card>
-      </div>
+      {/* Quick actions */}
+      <QuickActions />
+
+      {/* Recent scans */}
+      <RecentScans />
     </div>
   );
 }
