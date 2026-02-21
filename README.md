@@ -4,7 +4,7 @@ A modern web UI for [czkawka_cli](https://github.com/qarmin/czkawka) — the pow
 
 > *"Lustro"* means *mirror* in Polish 🇵🇱 — fitting for a tool that finds duplicate mirrors of your files.
 
-![Dashboard](docs/screenshots/dashboard.png)
+<!-- Screenshot will be added after first deployment -->
 
 ## ✨ Features
 
