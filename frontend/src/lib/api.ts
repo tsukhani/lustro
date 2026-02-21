@@ -82,6 +82,10 @@ export function getStorageStats() {
   return request<StorageStat[]>("/storage/stats");
 }
 
+export function getStorageDirectories() {
+  return request<{ path: string; name: string }[]>("/storage/directories");
+}
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------

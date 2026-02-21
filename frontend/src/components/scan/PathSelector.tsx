@@ -1,38 +1,39 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { formatBytes } from "@/lib/utils";
-import { FolderOpen, CheckSquare, Square } from "lucide-react";
+import { FolderOpen, CheckSquare, Square, Loader2 } from "lucide-react";
+import { getStorageDirectories } from "@/lib/api";
 
 interface StoragePath {
   path: string;
   name: string;
-  size?: number;
 }
 
 interface PathSelectorProps {
-  paths: StoragePath[];
   selected: string[];
   onSelectionChange: (selected: string[]) => void;
 }
 
-/** Default mock paths representing typical NAS storage volumes */
-const DEFAULT_PATHS: StoragePath[] = [
-  { path: "/storage/video", name: "Video", size: 2_500_000_000_000 },
-  { path: "/storage/music", name: "Music", size: 150_000_000_000 },
-  { path: "/storage/photos", name: "Photos", size: 800_000_000_000 },
-  { path: "/storage/documents", name: "Documents", size: 50_000_000_000 },
-  { path: "/storage/downloads", name: "Downloads", size: 200_000_000_000 },
-  { path: "/storage/backup", name: "Backup", size: 1_000_000_000_000 },
-];
-
 export function PathSelector({
-  paths = DEFAULT_PATHS,
   selected,
   onSelectionChange,
 }: PathSelectorProps) {
+  const [paths, setPaths] = useState<StoragePath[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getStorageDirectories().then((dirs) => {
+      setPaths(dirs);
+      // Auto-select all on first load if nothing selected
+      if (selected.length === 0 && dirs.length > 0) {
+        onSelectionChange(dirs.map((d) => d.path));
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const allSelected = selected.length === paths.length && paths.length > 0;
-  const someSelected = selected.length > 0 && selected.length < paths.length;
 
   function togglePath(path: string) {
     if (selected.includes(path)) {
@@ -81,36 +82,42 @@ export function PathSelector({
         </div>
       </CardHeader>
       <CardContent>
-        {someSelected && (
-          <p className="text-xs text-muted-foreground mb-3">
-            {selected.length} of {paths.length} selected
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading directories...
+          </div>
+        ) : paths.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">
+            No storage directories found. Check your Docker volume mounts.
           </p>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground mb-3">
+              {selected.length} of {paths.length} selected
+            </p>
+            <div className="space-y-2">
+              {paths.map((p) => (
+                <label
+                  key={p.path}
+                  className="flex items-center gap-3 p-2.5 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
+                >
+                  <Checkbox
+                    checked={selected.includes(p.path)}
+                    onCheckedChange={() => togglePath(p.path)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium">{p.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono truncate">
+                      {p.path}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </>
         )}
-        <div className="space-y-2">
-          {paths.map((p) => (
-            <label
-              key={p.path}
-              className="flex items-center gap-3 p-2.5 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-            >
-              <Checkbox
-                checked={selected.includes(p.path)}
-                onCheckedChange={() => togglePath(p.path)}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium">{p.name}</div>
-                <div className="text-xs text-muted-foreground font-mono truncate">
-                  {p.path}
-                </div>
-              </div>
-              {p.size != null && (
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {formatBytes(p.size)}
-                </span>
-              )}
-            </label>
-          ))}
-        </div>
-        {selected.length === 0 && (
+        {!loading && selected.length === 0 && paths.length > 0 && (
           <p className="text-xs text-destructive mt-3">
             Select at least one directory to scan.
           </p>

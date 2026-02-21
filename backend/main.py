@@ -168,6 +168,30 @@ async def storage_stats():
     return await get_storage_stats()
 
 
+@app.get("/api/storage/directories")
+async def storage_directories():
+    """List actual directories available under /storage."""
+    import shutil
+    from pathlib import Path
+    storage_root = Path(os.getenv("STORAGE_ROOT", "/storage"))
+    dirs = []
+    if storage_root.exists():
+        for child in sorted(storage_root.iterdir()):
+            if child.is_dir():
+                name = child.name.replace("_", " ").replace("-", " ").title()
+                try:
+                    usage = shutil.disk_usage(child)
+                    # Get actual folder size estimate from the directory
+                    # Use a quick count of immediate children as a proxy
+                    dirs.append({
+                        "path": str(child),
+                        "name": name,
+                    })
+                except OSError:
+                    dirs.append({"path": str(child), "name": name})
+    return dirs
+
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------

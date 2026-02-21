@@ -97,14 +97,6 @@ export default function Scan() {
       {phase === "idle" && (
         <>
           <PathSelector
-            paths={[
-              { path: "/storage/video", name: "Video", size: 2_500_000_000_000 },
-              { path: "/storage/music", name: "Music", size: 150_000_000_000 },
-              { path: "/storage/photos", name: "Photos", size: 800_000_000_000 },
-              { path: "/storage/documents", name: "Documents", size: 50_000_000_000 },
-              { path: "/storage/downloads", name: "Downloads", size: 200_000_000_000 },
-              { path: "/storage/backup", name: "Backup", size: 1_000_000_000_000 },
-            ]}
             selected={selectedPaths}
             onSelectionChange={setSelectedPaths}
           />
