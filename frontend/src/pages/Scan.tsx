@@ -10,15 +10,15 @@ import type { ScanOptions, ScanType } from "@/types";
 import { Play, Loader2 } from "lucide-react";
 
 const DEFAULT_OPTIONS: Record<string, ScanOptions> = {
-  duplicates: { search_method: "hash", hash_type: "blake3", min_size: 1048576 },
-  "similar-images": { similarity_preset: "high" },
-  "similar-videos": { tolerance: 10 },
-  "similar-music": { music_similarity: "tags" },
+  dup: { search_method: "hash", hash_type: "blake3", min_size: 1048576 },
+  "image": { similarity_preset: "high" },
+  "video": { tolerance: 10 },
+  "music": { music_similarity: "tags" },
 };
 
 export default function Scan() {
   const { type } = useParams<{ type: string }>();
-  const scanType = (type ?? "duplicates") as ScanType;
+  const scanType = (type ?? "dup") as ScanType;
   const label = SCAN_TYPE_LABELS[scanType] ?? scanType;
 
   const [selectedPaths, setSelectedPaths] = useState<string[]>([

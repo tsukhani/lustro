@@ -14,15 +14,16 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 class ScanType(str, enum.Enum):
-    DUPLICATES = "duplicates"
-    SIMILAR_IMAGES = "similar-images"
-    SIMILAR_VIDEOS = "similar-videos"
-    SIMILAR_MUSIC = "similar-music"
-    EMPTY_DIRS = "empty-dirs"
+    # Values are the actual czkawka_cli v11 subcommand names
+    DUPLICATES = "dup"
+    SIMILAR_IMAGES = "image"
+    SIMILAR_VIDEOS = "video"
+    SIMILAR_MUSIC = "music"
+    EMPTY_DIRS = "empty-folders"
     EMPTY_FILES = "empty-files"
-    TEMPORARY = "temporary"
+    TEMPORARY = "temp"
     SYMLINKS = "symlinks"
-    BAD_EXTENSIONS = "bad-extensions"
+    BAD_EXTENSIONS = "ext"
     BROKEN = "broken"
 
 

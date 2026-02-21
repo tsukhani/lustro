@@ -58,15 +58,15 @@ export function isImageFile(path: string): boolean {
 }
 
 export const SCAN_TYPE_LABELS: Record<ScanType, string> = {
-  duplicates: "Duplicate Files",
-  "similar-images": "Similar Images",
-  "similar-videos": "Similar Videos",
-  "similar-music": "Similar Music",
-  "empty-dirs": "Empty Directories",
+  dup: "Duplicate Files",
+  "image": "Similar Images",
+  "video": "Similar Videos",
+  "music": "Similar Music",
+  "empty-folders": "Empty Directories",
   "empty-files": "Empty Files",
-  temporary: "Temporary Files",
+  temp: "Temporary Files",
   symlinks: "Broken Symlinks",
-  "bad-extensions": "Bad Extensions",
+  "ext": "Bad Extensions",
   broken: "Broken Files",
 };
 

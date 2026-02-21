@@ -3,15 +3,15 @@
 // ---------------------------------------------------------------------------
 
 export type ScanType =
-  | "duplicates"
-  | "similar-images"
-  | "similar-videos"
-  | "similar-music"
-  | "empty-dirs"
+  | "dup"
+  | "image"
+  | "video"
+  | "music"
+  | "empty-folders"
   | "empty-files"
-  | "temporary"
+  | "temp"
   | "symlinks"
-  | "bad-extensions"
+  | "ext"
   | "broken";
 
 export type ScanStatus =
@@ -102,10 +102,10 @@ export function isFlatResults(data: ScanResultData): data is FlatResults {
 
 /** Scan types that return grouped results */
 export const GROUPED_SCAN_TYPES: ScanType[] = [
-  "duplicates",
-  "similar-images",
-  "similar-videos",
-  "similar-music",
+  "dup",
+  "image",
+  "video",
+  "music",
 ];
 
 // ---------------------------------------------------------------------------

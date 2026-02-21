@@ -169,32 +169,36 @@ class ScanManager:
     # Internal
     # ------------------------------------------------------------------
 
-    def _build_command(self, scan: ScanResult) -> list[str]:
-        """Build the czkawka_cli command line."""
+    def _build_command(self, scan: ScanResult, json_output_path: str | None = None) -> list[str]:
+        """Build the czkawka_cli command line for v11+."""
         cmd = [CZKAWKA_BIN, scan.scan_type.value]
 
         # Directories
         if scan.directories:
-            cmd.extend(["--directories", ",".join(scan.directories)])
+            cmd.extend(["--directories"] + scan.directories)
 
         # Excluded directories
         if scan.excluded_directories:
-            cmd.extend(["--excluded-directories", ",".join(scan.excluded_directories)])
+            cmd.extend(["--excluded-directories"] + scan.excluded_directories)
 
-        # JSON output (may not be available in all versions)
-        cmd.append("--json")
+        # JSON output via file (v11 uses -C for compact JSON file)
+        if json_output_path:
+            cmd.extend(["--compact-file-to-save", json_output_path])
+
+        # Suppress console output when saving to file
+        cmd.append("--do-not-print-results")
 
         # Type-specific options
         opts = scan.options
         if scan.scan_type == ScanType.DUPLICATES:
             if opts.search_method:
-                cmd.extend(["--search-method", opts.search_method])
+                cmd.extend(["--search-method", opts.search_method.upper()])
             if opts.min_size is not None:
-                cmd.extend(["--min-size", str(opts.min_size)])
+                cmd.extend(["--minimal-file-size", str(opts.min_size)])
 
         elif scan.scan_type == ScanType.SIMILAR_IMAGES:
-            if opts.similarity_preset:
-                cmd.extend(["--similarity-preset", opts.similarity_preset])
+            if opts.tolerance is not None:
+                cmd.extend(["--max-difference", str(opts.tolerance)])
 
         elif scan.scan_type == ScanType.SIMILAR_VIDEOS:
             if opts.tolerance is not None:
@@ -210,7 +214,7 @@ class ScanManager:
 
         # min_size applies globally if set for non-duplicate types too
         if opts.min_size is not None and scan.scan_type != ScanType.DUPLICATES:
-            cmd.extend(["--min-size", str(opts.min_size)])
+            cmd.extend(["--minimal-file-size", str(opts.min_size)])
 
         return cmd
 
@@ -220,7 +224,9 @@ class ScanManager:
         scan.started_at = datetime.now(timezone.utc)
         start_time = time.monotonic()
 
-        cmd = self._build_command(scan)
+        # czkawka v11 writes JSON to a file, not stdout
+        json_output = SCANS_DIR / f"{scan.id}_output.json"
+        cmd = self._build_command(scan, str(json_output))
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -230,65 +236,55 @@ class ScanManager:
             )
             self._processes[scan.id] = proc
 
-            # Read stderr for progress (line-by-line)
-            stderr_lines: list[str] = []
-
+            # Read stderr for progress (czkawka prints progress to stderr)
             async def _read_progress():
                 assert proc.stderr is not None
                 async for line in proc.stderr:
                     text = line.decode(errors="replace").strip()
                     if text:
-                        stderr_lines.append(text)
                         scan.progress.current_stage = text
                         scan.progress.elapsed_seconds = round(time.monotonic() - start_time, 1)
 
-                        # Try to extract file count from progress messages
                         files_match = re.search(r'(\d+)\s*files?', text, re.IGNORECASE)
                         if files_match:
                             scan.progress.files_processed = int(files_match.group(1))
 
                         await self._notify_progress(scan.id, scan.progress)
 
-            # Read stdout separately (can't use communicate() — it also reads stderr)
-            async def _read_stdout():
+            # Drain stdout too (to avoid blocking)
+            async def _drain_stdout():
                 assert proc.stdout is not None
-                chunks = []
-                async for chunk in proc.stdout:
-                    chunks.append(chunk)
-                return b"".join(chunks)
+                async for _ in proc.stdout:
+                    pass
 
             progress_task = asyncio.create_task(_read_progress())
-            stdout_task = asyncio.create_task(_read_stdout())
+            stdout_task = asyncio.create_task(_drain_stdout())
 
             await proc.wait()
             await progress_task
-            stdout_data = await stdout_task
+            await stdout_task
 
             if scan.status == ScanStatus.CANCELLED:
                 return
 
-            if proc.returncode == 0:
-                # Try JSON parsing first
-                output_text = stdout_data.decode(errors="replace").strip() if stdout_data else ""
+            # czkawka exits with code 2 when it finds results (not an error!)
+            # Code 0 = no results found, Code 2 = results found
+            if proc.returncode in (0, 2):
                 results = None
-                if output_text:
+                # Read JSON results from file
+                if json_output.exists():
                     try:
-                        results = json.loads(output_text)
+                        results = json.loads(json_output.read_text())
                     except json.JSONDecodeError:
-                        # Fallback to text parsing if JSON flag wasn't supported
-                        results = parse_text_output(output_text, scan.scan_type)
+                        results = None
+                    finally:
+                        json_output.unlink(missing_ok=True)
 
                 scan.results = results
                 scan.findings_count = self._count_findings(results)
                 scan.total_size = self._calc_total_size(results)
                 scan.status = ScanStatus.COMPLETED
             else:
-                # Check if --json flag caused the error (unsupported)
-                stderr_text = "\n".join(stderr_lines)
-                if "--json" in stderr_text or "unknown" in stderr_text.lower():
-                    # Retry without --json
-                    await self._run_scan_text_mode(scan, start_time)
-                    return
                 scan.status = ScanStatus.FAILED
                 scan.error = f"czkawka_cli exited with code {proc.returncode}"
 
@@ -302,42 +298,7 @@ class ScanManager:
             scan.completed_at = datetime.now(timezone.utc)
             scan.progress.elapsed_seconds = round(time.monotonic() - start_time, 1)
             self._processes.pop(scan.id, None)
-            self._persist(scan)
-
-    async def _run_scan_text_mode(self, scan: ScanResult, start_time: float) -> None:
-        """Re-run scan without --json flag, parse text output instead."""
-        cmd = [c for c in self._build_command(scan) if c != "--json"]
-
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            self._processes[scan.id] = proc
-
-            stdout_data, stderr_data = await proc.communicate()
-
-            if scan.status == ScanStatus.CANCELLED:
-                return
-
-            if proc.returncode == 0:
-                output_text = stdout_data.decode(errors="replace").strip() if stdout_data else ""
-                results = parse_text_output(output_text, scan.scan_type)
-                scan.results = results
-                scan.findings_count = self._count_findings(results)
-                scan.total_size = self._calc_total_size(results)
-                scan.status = ScanStatus.COMPLETED
-            else:
-                scan.status = ScanStatus.FAILED
-                scan.error = f"czkawka_cli exited with code {proc.returncode}"
-        except Exception as exc:
-            scan.status = ScanStatus.FAILED
-            scan.error = str(exc)
-        finally:
-            scan.completed_at = datetime.now(timezone.utc)
-            scan.progress.elapsed_seconds = round(time.monotonic() - start_time, 1)
-            self._processes.pop(scan.id, None)
+            json_output.unlink(missing_ok=True)  # cleanup
             self._persist(scan)
 
     async def _notify_progress(self, scan_id: str, progress: ScanProgress) -> None:

@@ -31,15 +31,15 @@ interface NavItem {
 }
 
 const SCAN_ITEMS: NavItem[] = [
-  { to: "/scan/duplicates", label: "Duplicate Files", icon: <Copy className="h-4 w-4" />, scanType: "duplicates" },
-  { to: "/scan/similar-images", label: "Similar Images", icon: <Image className="h-4 w-4" />, scanType: "similar-images" },
-  { to: "/scan/similar-videos", label: "Similar Videos", icon: <Video className="h-4 w-4" />, scanType: "similar-videos" },
-  { to: "/scan/similar-music", label: "Similar Music", icon: <Music className="h-4 w-4" />, scanType: "similar-music" },
-  { to: "/scan/empty-dirs", label: "Empty Directories", icon: <FolderOpen className="h-4 w-4" />, scanType: "empty-dirs" },
+  { to: "/scan/dup", label: "Duplicate Files", icon: <Copy className="h-4 w-4" />, scanType: "dup" },
+  { to: "/scan/image", label: "Similar Images", icon: <Image className="h-4 w-4" />, scanType: "image" },
+  { to: "/scan/video", label: "Similar Videos", icon: <Video className="h-4 w-4" />, scanType: "video" },
+  { to: "/scan/music", label: "Similar Music", icon: <Music className="h-4 w-4" />, scanType: "music" },
+  { to: "/scan/empty-folders", label: "Empty Directories", icon: <FolderOpen className="h-4 w-4" />, scanType: "empty-folders" },
   { to: "/scan/empty-files", label: "Empty Files", icon: <FileX className="h-4 w-4" />, scanType: "empty-files" },
-  { to: "/scan/temporary", label: "Temporary Files", icon: <Trash2 className="h-4 w-4" />, scanType: "temporary" },
+  { to: "/scan/temp", label: "Temporary Files", icon: <Trash2 className="h-4 w-4" />, scanType: "temp" },
   { to: "/scan/symlinks", label: "Broken Symlinks", icon: <Link2Off className="h-4 w-4" />, scanType: "symlinks" },
-  { to: "/scan/bad-extensions", label: "Bad Extensions", icon: <FileWarning className="h-4 w-4" />, scanType: "bad-extensions" },
+  { to: "/scan/ext", label: "Bad Extensions", icon: <FileWarning className="h-4 w-4" />, scanType: "ext" },
   { to: "/scan/broken", label: "Broken Files", icon: <FileMinus2 className="h-4 w-4" />, scanType: "broken" },
 ];
 

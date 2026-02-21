@@ -20,28 +20,28 @@ interface QuickAction {
 
 const QUICK_SCANS: QuickAction[] = [
   {
-    type: "duplicates",
+    type: "dup",
     label: "Duplicate Files",
     description: "Find files with identical content",
     icon: <Copy className="h-6 w-6" />,
     color: "text-blue-500",
   },
   {
-    type: "similar-images",
+    type: "image",
     label: "Similar Images",
     description: "Find visually similar images",
     icon: <Image className="h-6 w-6" />,
     color: "text-purple-500",
   },
   {
-    type: "empty-dirs",
+    type: "empty-folders",
     label: "Empty Directories",
     description: "Find empty folders to clean up",
     icon: <FolderOpen className="h-6 w-6" />,
     color: "text-yellow-500",
   },
   {
-    type: "temporary",
+    type: "temp",
     label: "Temporary Files",
     description: "Find leftover temp files",
     icon: <Trash2 className="h-6 w-6" />,

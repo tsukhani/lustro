@@ -194,13 +194,13 @@ export function ScanConfig({
 }: ScanConfigProps) {
   function renderTypeConfig() {
     switch (scanType) {
-      case "duplicates":
+      case "dup":
         return <DuplicatesConfig options={options} onChange={onOptionsChange} />;
-      case "similar-images":
+      case "image":
         return <SimilarImagesConfig options={options} onChange={onOptionsChange} />;
-      case "similar-videos":
+      case "video":
         return <SimilarVideosConfig options={options} onChange={onOptionsChange} />;
-      case "similar-music":
+      case "music":
         return <SimilarMusicConfig options={options} onChange={onOptionsChange} />;
       default:
         return <MinimalConfig />;
