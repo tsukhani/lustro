@@ -127,7 +127,7 @@ function NavLinks({ onClick }: { onClick?: () => void }) {
 function SidebarHeader() {
   return (
     <div className="px-6 py-5">
-      <h2 className="text-xl font-bold tracking-tight">Czkawka</h2>
+      <h2 className="text-xl font-bold tracking-tight">Lustro</h2>
       <p className="text-xs text-muted-foreground">File Cleanup UI</p>
     </div>
   );

@@ -1,4 +1,4 @@
-# Czkawka Web UI — Project Specification
+# Lustro — Project Specification
 
 ## Overview
 A modern web UI wrapper around `czkawka_cli` — the battle-tested Rust-based file cleanup engine. All scanning/detection logic comes from czkawka_cli. We build the web interface.
@@ -195,7 +195,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
 ### Docker Compose (dev)
 ```yaml
 services:
-  czkawka-ui:
+  lustro:
     build: .
     ports:
       - "8080:8080"
@@ -206,7 +206,7 @@ services:
 
 ## File Structure
 ```
-czkawka-ui/
+lustro/
 ├── SPEC.md
 ├── Dockerfile
 ├── docker-compose.yml

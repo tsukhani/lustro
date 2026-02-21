@@ -29,7 +29,7 @@ function usePageTitle(): string {
   const resultsMatch = path.match(/^\/results\/(.+)$/);
   if (resultsMatch) return "Scan Results";
 
-  return "Czkawka";
+  return "Lustro";
 }
 
 function StorageSummary() {

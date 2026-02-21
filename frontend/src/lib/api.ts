@@ -1,5 +1,5 @@
 /**
- * API client — typed fetch wrapper for the Czkawka backend.
+ * API client — typed fetch wrapper for the Lustro backend.
  */
 
 import type {

@@ -1,5 +1,5 @@
 services:
-  czkawka-ui:
+  lustro:
     build: .
     ports:
       - "8080:8080"
