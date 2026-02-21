@@ -104,6 +104,14 @@ export default function Results() {
     setSelectedFiles(new Set());
   }, []);
 
+  const selectAll = useCallback((paths: string[]) => {
+    setSelectedFiles((prev) => {
+      const next = new Set(prev);
+      for (const p of paths) next.add(p);
+      return next;
+    });
+  }, []);
+
   const handleSmartSelect = useCallback(
     (strategy: SmartSelectStrategy) => {
       if (!groups) return;
@@ -286,6 +294,8 @@ export default function Results() {
               files={allFiles}
               selectedFiles={selectedFiles}
               onToggleFile={toggleFile}
+              onSelectAll={selectAll}
+              onDeselectAll={clearSelection}
             />
           </TabsContent>
         </Tabs>
@@ -294,6 +304,8 @@ export default function Results() {
           files={allFiles}
           selectedFiles={selectedFiles}
           onToggleFile={toggleFile}
+          onSelectAll={selectAll}
+          onDeselectAll={clearSelection}
         />
       )}
 

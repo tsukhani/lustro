@@ -174,16 +174,27 @@ class ScanManager:
         cmd = [CZKAWKA_BIN, scan.scan_type.value]
 
         # Directories — filter out non-existent paths to prevent czkawka errors
+        # czkawka_cli flags expect comma-separated values
         valid_dirs = [d for d in (scan.directories or []) if Path(d).is_dir()]
         if valid_dirs:
-            cmd.extend(["--directories"] + valid_dirs)
+            cmd.extend(["--directories", ",".join(valid_dirs)])
         elif scan.directories:
             # All directories are invalid
-            cmd.extend(["--directories"] + scan.directories)  # let czkawka report the error
+            cmd.extend(["--directories", ",".join(scan.directories)])  # let czkawka report the error
 
-        # Excluded directories
+        # Excluded directories / items
+        # czkawka_cli flags expect comma-separated values (not space-separated args)
+        # --excluded-directories requires absolute paths
+        # Relative patterns (like @eaDir, node_modules, .DS_Store) go to --excluded-items as wildcards
         if scan.excluded_directories:
-            cmd.extend(["--excluded-directories"] + scan.excluded_directories)
+            abs_dirs = [d for d in scan.excluded_directories if d.startswith("/")]
+            patterns = [d for d in scan.excluded_directories if not d.startswith("/")]
+            if abs_dirs:
+                cmd.extend(["--excluded-directories", ",".join(abs_dirs)])
+            if patterns:
+                # Convert relative names to wildcard patterns: "node_modules" -> "*/node_modules"
+                wildcards = [f"*/{p}" if not p.startswith("*") else p for p in patterns]
+                cmd.extend(["--excluded-items", ",".join(wildcards)])
 
         # JSON output via file (v11 uses -C for compact JSON file)
         if json_output_path:
@@ -284,9 +295,9 @@ class ScanManager:
                     json_output.unlink(missing_ok=True)
 
             if results is not None or proc.returncode == 0:
-                scan.results = results
-                scan.findings_count = self._count_findings(results)
-                scan.total_size = self._calc_total_size(results)
+                scan.results = self._normalize_results(results, scan.scan_type)
+                scan.findings_count = self._count_findings(scan.results)
+                scan.total_size = self._calc_total_size(scan.results)
                 scan.status = ScanStatus.COMPLETED
             else:
                 scan.status = ScanStatus.FAILED
@@ -313,57 +324,106 @@ class ScanManager:
                 pass
 
     @staticmethod
+    def _normalize_results(results, scan_type: ScanType):
+        """Convert raw czkawka v11 JSON into a normalized format for the frontend.
+
+        czkawka v11 grouped output (dup, image, video, music):
+            { "size_bytes": [ [{"path":..,"size":..,"modified_date":..,"hash":..}, ...] ] }
+        We normalize to:
+            { "groups": [ {"id": 0, "files": [{"path":.., "size":.., "modified":.., "hash":..}], "total_size": N} ] }
+
+        Flat scan types (empty-folders, empty-files, temp, etc.) may return a list.
+        """
+        if results is None:
+            return {"groups": [], "files": []}
+
+        # Already normalized (e.g., loaded from persisted scan)
+        if isinstance(results, dict) and "groups" in results:
+            return results
+        if isinstance(results, dict) and "files" in results:
+            return results
+
+        grouped_types = {ScanType.DUPLICATES, ScanType.SIMILAR_IMAGES, ScanType.SIMILAR_VIDEOS, ScanType.SIMILAR_MUSIC}
+
+        if scan_type in grouped_types and isinstance(results, dict):
+            groups = []
+            group_id = 0
+            for _size_key, size_groups in results.items():
+                if not isinstance(size_groups, list):
+                    continue
+                for group in size_groups:
+                    if not isinstance(group, list) or not group:
+                        continue
+                    files = []
+                    group_total = 0
+                    for f in group:
+                        if not isinstance(f, dict):
+                            continue
+                        size = int(f.get("size", 0))
+                        mod_ts = f.get("modified_date", 0)
+                        # Convert unix timestamp to ISO string
+                        try:
+                            modified = datetime.fromtimestamp(mod_ts, tz=timezone.utc).isoformat()
+                        except (OSError, ValueError):
+                            modified = ""
+                        files.append({
+                            "path": f.get("path", ""),
+                            "size": size,
+                            "modified": modified,
+                            "hash": f.get("hash", ""),
+                        })
+                        group_total += size
+                    if files:
+                        groups.append({"id": group_id, "files": files, "total_size": group_total})
+                        group_id += 1
+            return {"groups": groups}
+
+        # Flat results (list of paths or dicts)
+        if isinstance(results, list):
+            files = []
+            for item in results:
+                if isinstance(item, str):
+                    files.append({"path": item, "size": 0, "modified": ""})
+                elif isinstance(item, dict):
+                    mod_ts = item.get("modified_date", 0)
+                    try:
+                        modified = datetime.fromtimestamp(mod_ts, tz=timezone.utc).isoformat()
+                    except (OSError, ValueError):
+                        modified = ""
+                    files.append({
+                        "path": item.get("path", ""),
+                        "size": int(item.get("size", 0)),
+                        "modified": modified,
+                    })
+            return {"files": files}
+
+        return {"groups": [], "files": []}
+
+    @staticmethod
     def _count_findings(results) -> int:
-        """Best-effort count of items in the results."""
+        """Count findings from normalized results."""
         if not results:
             return 0
-        if isinstance(results, list):
-            # Could be groups or flat items
-            count = 0
-            for item in results:
-                if isinstance(item, dict) and "files" in item:
-                    count += len(item["files"])
-                else:
-                    count += 1
-            return count
         if isinstance(results, dict):
-            total = 0
-            for v in results.values():
-                if isinstance(v, list):
-                    total += len(v)
-            return total
+            if "groups" in results:
+                return len(results["groups"])
+            if "files" in results:
+                return len(results["files"])
         return 0
 
     @staticmethod
     def _calc_total_size(results) -> int:
-        """Best-effort calculation of total file size from results."""
+        """Calculate total file size from normalized results."""
         if not results:
             return 0
         total = 0
-        if isinstance(results, list):
-            for item in results:
-                if isinstance(item, dict):
-                    if "files" in item:
-                        for f in item["files"]:
-                            if isinstance(f, dict) and "size" in f:
-                                try:
-                                    total += int(f["size"])
-                                except (ValueError, TypeError):
-                                    pass
-                    elif "size" in item:
-                        try:
-                            total += int(item["size"])
-                        except (ValueError, TypeError):
-                            pass
-        elif isinstance(results, dict):
-            for v in results.values():
-                if isinstance(v, list):
-                    for item in v:
-                        if isinstance(item, dict) and "size" in item:
-                            try:
-                                total += int(item["size"])
-                            except (ValueError, TypeError):
-                                pass
+        if isinstance(results, dict):
+            if "groups" in results:
+                for group in results["groups"]:
+                    total += group.get("total_size", 0)
+            elif "files" in results:
+                for f in results["files"]:
+                    total += f.get("size", 0)
         return total
 
     def _persist(self, scan: ScanResult) -> None:

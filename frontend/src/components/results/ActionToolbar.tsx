@@ -203,11 +203,7 @@ export function ActionToolbar({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={
-                confirmAction === "delete"
-                  ? "bg-destructive text-white hover:bg-destructive/90"
-                  : ""
-              }
+              variant={confirmAction === "delete" ? "destructive" : "default"}
               onClick={() => {
                 if (confirmAction === "delete") {
                   onDelete(selectedPaths);

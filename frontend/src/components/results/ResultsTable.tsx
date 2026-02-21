@@ -30,6 +30,8 @@ interface ResultsTableProps {
   files: FileEntry[];
   selectedFiles: Set<string>;
   onToggleFile: (path: string) => void;
+  onSelectAll?: (paths: string[]) => void;
+  onDeselectAll?: () => void;
 }
 
 type SortField = "name" | "size" | "path" | "date";
@@ -41,6 +43,8 @@ export function ResultsTable({
   files,
   selectedFiles,
   onToggleFile,
+  onSelectAll,
+  onDeselectAll,
 }: ResultsTableProps) {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -126,7 +130,28 @@ export function ResultsTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10" />
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={
+                    filtered.length > 0 &&
+                    filtered.every((f) => selectedFiles.has(f.path))
+                  }
+                  ref={(el) => {
+                    if (el) {
+                      const someSelected = filtered.some((f) => selectedFiles.has(f.path));
+                      const allSelected = filtered.length > 0 && filtered.every((f) => selectedFiles.has(f.path));
+                      (el as unknown as HTMLInputElement).indeterminate = someSelected && !allSelected;
+                    }
+                  }}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      onSelectAll?.(filtered.map((f) => f.path));
+                    } else {
+                      onDeselectAll?.();
+                    }
+                  }}
+                />
+              </TableHead>
               <TableHead>
                 <Button
                   variant="ghost"
