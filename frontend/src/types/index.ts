@@ -135,6 +135,7 @@ export interface StorageStat {
   used: number;
   free: number;
   percent_used: number;
+  sub_mounts?: string[] | null;
 }
 
 // ---------------------------------------------------------------------------
