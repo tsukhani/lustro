@@ -249,10 +249,20 @@ class ScanManager:
 
                         await self._notify_progress(scan.id, scan.progress)
 
-            progress_task = asyncio.create_task(_read_progress())
+            # Read stdout separately (can't use communicate() — it also reads stderr)
+            async def _read_stdout():
+                assert proc.stdout is not None
+                chunks = []
+                async for chunk in proc.stdout:
+                    chunks.append(chunk)
+                return b"".join(chunks)
 
-            stdout_data, _ = await proc.communicate()
+            progress_task = asyncio.create_task(_read_progress())
+            stdout_task = asyncio.create_task(_read_stdout())
+
+            await proc.wait()
             await progress_task
+            stdout_data = await stdout_task
 
             if scan.status == ScanStatus.CANCELLED:
                 return
