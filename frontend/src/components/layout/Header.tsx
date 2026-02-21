@@ -37,11 +37,10 @@ function StorageSummary() {
 
   if (loading || stats.length === 0) return null;
 
-  // All folders share the same filesystem. API returns: used=folder size, total=fs total, free=fs free
-  const fsTotal = stats.length > 0 ? stats[0].total : 0;
-  const fsFree = stats.length > 0 ? stats[0].free : 0;
-  const fsUsed = fsTotal - fsFree;
-  const pct = fsTotal > 0 ? (fsUsed / fsTotal) * 100 : 0;
+  // Deduplicated filesystem stats — sum unique filesystems only
+  const totalSize = stats.reduce((acc, s) => acc + s.total, 0);
+  const totalUsed = stats.reduce((acc, s) => acc + s.used, 0);
+  const pct = totalSize > 0 ? (totalUsed / totalSize) * 100 : 0;
 
   return (
     <Tooltip>
@@ -49,7 +48,7 @@ function StorageSummary() {
         <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
           <HardDrive className="h-3.5 w-3.5" />
           <Progress value={pct} className="w-24 h-2" />
-          <span>{formatBytes(fsUsed)} / {formatBytes(fsTotal)}</span>
+          <span>{formatBytes(totalUsed)} / {formatBytes(totalSize)}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent>

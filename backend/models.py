@@ -121,6 +121,7 @@ class StorageStat(BaseModel):
     used: int           # bytes
     free: int           # bytes
     percent_used: float
+    sub_mounts: list[str] | None = None  # if multiple folders share same filesystem
 
 
 # ---------------------------------------------------------------------------
