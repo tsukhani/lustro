@@ -173,9 +173,13 @@ class ScanManager:
         """Build the czkawka_cli command line for v11+."""
         cmd = [CZKAWKA_BIN, scan.scan_type.value]
 
-        # Directories
-        if scan.directories:
-            cmd.extend(["--directories"] + scan.directories)
+        # Directories — filter out non-existent paths to prevent czkawka errors
+        valid_dirs = [d for d in (scan.directories or []) if Path(d).is_dir()]
+        if valid_dirs:
+            cmd.extend(["--directories"] + valid_dirs)
+        elif scan.directories:
+            # All directories are invalid
+            cmd.extend(["--directories"] + scan.directories)  # let czkawka report the error
 
         # Excluded directories
         if scan.excluded_directories:
